@@ -978,6 +978,12 @@ def get_rule_yaml(rule_file, custom=False):
     names = [os.path.basename(x) for x in glob.glob('../custom/rules/**/*.yaml', recursive=True)]
     file_name = os.path.basename(rule_file)
 
+    # get parent values
+    try:
+        parent_values = baseline_yaml["parent_values"]
+    except KeyError:
+        parent_values = "recommended"
+        
     if custom:
         print(f"Custom settings found for rule: {rule_file}")
         try:
