@@ -23,7 +23,7 @@ from xml.sax.saxutils import escape
 
 
 class MacSecurityRule():
-    def __init__(self, title, rule_id, severity, discussion, check, fix, cci, cce, nist_controls, nist_171, disa_stig, srg, cisv8, custom_refs, tags, result_value, mobileconfig, mobileconfig_info, customized):
+    def __init__(self, title, rule_id, severity, discussion, check, fix, cci, cce, nist_controls, nist_171, disa_stig, srg, cisv8, custom_refs, odv, tags, result_value, mobileconfig, mobileconfig_info, customized):
         self.rule_title = title
         self.rule_id = rule_id
         self.rule_severity = severity
@@ -38,6 +38,7 @@ class MacSecurityRule():
         self.rule_srg = srg
         self.rule_cisv8 = cisv8
         self.rule_custom_refs = custom_refs
+        self.rule_odv = odv
         self.rule_result_value = result_value
         self.rule_tags = tags
         self.rule_mobileconfig = mobileconfig
@@ -913,6 +914,62 @@ fi
 
     print(f"Finished building ")
 
+def fill_in_odv(resulting_yaml, parent_values):
+    fields_to_process = ["title", "discussion", "check", "fix"]
+    _has_odv = False
+    if "odv" in resulting_yaml:
+        try:
+            if type(resulting_yaml["odv"][parent_values]) == int:
+                odv = resulting_yaml["odv"][parent_values]
+            else:
+                odv = str(resulting_yaml["odv"][parent_values])
+            _has_odv = True
+        except KeyError:
+            try:
+                if type(resulting_yaml["odv"]["custom"]) == int:
+                    odv = resulting_yaml["odv"]["custom"]
+                else:
+                    odv = str(resulting_yaml["odv"]["custom"])
+                _has_odv = True
+            except KeyError:
+                if type(resulting_yaml["odv"]["recommended"]) == int:
+                    odv = resulting_yaml["odv"]["recommended"]
+                else:
+                    odv = str(resulting_yaml["odv"]["recommended"])
+                _has_odv = True
+        else:
+            pass
+
+    if _has_odv:
+        for field in fields_to_process:
+            if "$ODV" in resulting_yaml[field]:
+                resulting_yaml[field] = resulting_yaml[field].replace("$ODV", str(odv))
+
+        if "result" in resulting_yaml.keys():
+            for result_value in resulting_yaml["result"]:
+                if "$ODV" in str(resulting_yaml["result"][result_value]):
+                    resulting_yaml["result"][result_value] = odv
+
+        if resulting_yaml['mobileconfig_info']:
+            for mobileconfig_type in resulting_yaml['mobileconfig_info']:
+                if isinstance(resulting_yaml['mobileconfig_info'][mobileconfig_type], dict):
+                    for mobileconfig_value in resulting_yaml['mobileconfig_info'][mobileconfig_type]:
+                        if "$ODV" in str(resulting_yaml['mobileconfig_info'][mobileconfig_type][mobileconfig_value]):
+                            if type(resulting_yaml['mobileconfig_info'][mobileconfig_type][mobileconfig_value]) == dict:
+                                for k,v in resulting_yaml['mobileconfig_info'][mobileconfig_type][mobileconfig_value].items():
+                                    if v == "$ODV":
+                                        resulting_yaml['mobileconfig_info'][mobileconfig_type][mobileconfig_value][k] = odv
+                            else:
+                                resulting_yaml['mobileconfig_info'][mobileconfig_type][mobileconfig_value] = odv
+
+        if "ddm_info" in resulting_yaml.keys():
+            for ddm_type, value in resulting_yaml["ddm_info"].items():
+                if isinstance(value, dict):
+                    for _value in value:
+                        if "$ODV" in str(value[_value]):
+                            resulting_yaml["ddm_info"][ddm_type] = odv
+                if "$ODV" in value:
+                    resulting_yaml["ddm_info"][ddm_type] = odv
 
 def get_rule_yaml(rule_file, custom=False):
     """ Takes a rule file, checks for a custom version, and returns the yaml for the rule
@@ -987,6 +1044,8 @@ def get_rule_yaml(rule_file, custom=False):
             except KeyError:
                 resulting_yaml[yaml_field] = og_rule_yaml[yaml_field]
 
+    fill_in_odv(resulting_yaml, parent_values)
+    
     return resulting_yaml
 
 def create_rules(baseline_yaml):
@@ -1003,6 +1062,7 @@ def create_rules(baseline_yaml):
             'tags',
             'id',
             'references',
+            'odv',            
             'result',
             'discussion',
             'customized']
@@ -1056,6 +1116,7 @@ def create_rules(baseline_yaml):
                                         rule_yaml['references']['srg'],
                                         rule_yaml['references']['cisv8'],
                                         rule_yaml['references']['custom'],
+                                        rule_yaml['odv'],
                                         rule_yaml['tags'],
                                         rule_yaml['result'],
                                         rule_yaml['mobileconfig'],
