@@ -407,7 +407,7 @@ def generate_profiles(baseline_name, build_path, parent_dir, baseline_yaml, sign
                 logging.debug(f"{rule}")
 
             #for rule in glob.glob('../rules/*/{}.yaml'.format(profile_rule)) + glob.glob('../custom/rules/**/{}.yaml'.format(profile_rule),recursive=True):
-            rule_yaml = get_rule_yaml(rule, custom)
+            rule_yaml = get_rule_yaml(rule, baseline_yaml, custom)
     
             if rule_yaml['mobileconfig']:
                 for payload_type, info in rule_yaml['mobileconfig_info'].items():
@@ -626,7 +626,7 @@ def generate_script(baseline_name, build_path, baseline_yaml, reference):
                 custom=False
                 logging.debug(f"{rule}")
 
-            rule_yaml = get_rule_yaml(rule, custom)
+            rule_yaml = get_rule_yaml(rule, baseline_yaml, custom)
 
             if rule_yaml['id'].startswith("supplemental"):
                 continue
@@ -971,7 +971,7 @@ def fill_in_odv(resulting_yaml, parent_values):
                 if "$ODV" in value:
                     resulting_yaml["ddm_info"][ddm_type] = odv
 
-def get_rule_yaml(rule_file, custom=False):
+def get_rule_yaml(rule_file, baseline_yaml, custom=False):
     """ Takes a rule file, checks for a custom version, and returns the yaml for the rule
     """
     resulting_yaml = {}
@@ -1092,7 +1092,7 @@ def create_rules(baseline_yaml):
                 custom=False
 
             #for rule in glob.glob('../rules/*/{}.yaml'.format(profile_rule)) + glob.glob('../custom/rules/**/{}.yaml'.format(profile_rule),recursive=True):
-            rule_yaml = get_rule_yaml(rule, custom)
+            rule_yaml = get_rule_yaml(rule, baseline_yaml, custom)
 
             for key in keys:
                 try:
@@ -1260,7 +1260,7 @@ def main():
                 rule_location = rule_path[0]
                 custom=False
             
-            rule_yaml = get_rule_yaml(rule_location, custom)
+            rule_yaml = get_rule_yaml(rule_location, baseline_yaml, custom)
 
     
     if args.profiles:
